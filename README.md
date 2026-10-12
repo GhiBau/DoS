@@ -10,7 +10,7 @@ Serious game pour s'entraîner au rôle de **DOS (Directeur des tirs)** en tir �
 
 Le jeu tient dans un seul fichier, `index.html`, sans dépendance ni serveur. Il suffit de l'ouvrir dans un navigateur (double-clic).
 
-Pour le mettre en ligne avec GitHub Pages : **Settings → Pages → Build and deployment → Deploy from a branch → `main` / `(root)`**. Le jeu sera accessible à l'adresse `https://<utilisateur>.github.io/<nom-du-dépôt>/`.
+Pour le mettre en ligne avec GitHub Pages : **Settings → Pages → Build and deployment → Deploy from a branch → `main` / `(root)`**. Le jeu sera accessible à l'adresse `https://ghibau.github.io/DoS/`.
 
 ## Déroulé d'une partie
 
@@ -85,7 +85,9 @@ Il s'agit d'une **simulation simplifiée** pour la formation, pas d'un outil off
 ## Structure du dépôt
 
 ```
-index.html      le jeu (HTML, CSS et JavaScript dans un seul fichier)
-README.md       ce fichier
-docs/           captures d'écran
+index.html          le jeu (HTML, CSS et JavaScript dans un seul fichier)
+README.md           ce fichier
+capture.png         capture d'écran (second binôme en plein tir)
+capture-score.png   capture d'écran (passage au score)
+apercu.png          image affichée quand le lien du jeu est partagé (balises Open Graph de index.html)
 ```
