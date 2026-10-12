@@ -2,9 +2,9 @@
 
 Serious game pour s'entraîner au rôle de **DOS (Directeur des tirs)** en tir à l'arc : gérer les feux et les signaux sonores, enchaîner les binômes AB / CD, repérer ce qui se passe sur la ligne de tir et décider quand accélérer ou arrêter.
 
-![Le second binôme en plein tir](docs/capture.png)
+![Le second binôme en plein tir](capture.png)
 
-![Tout le monde au score](docs/capture-score.png)
+![Tout le monde au score](capture-score.png)
 
 ## Jouer
 
