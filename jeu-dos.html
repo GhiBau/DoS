@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jeu du DOS – Directeur des tirs</title>
+<meta name="description" content="Serious game pour s'entraîner au rôle de DOS (Directeur des tirs) en tir à l'arc : feux, signaux sonores, binômes AB/CD, sécurité sur la ligne de tir.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:title" content="Jeu du DOS – Directeur des tirs">
+<meta property="og:description" content="Serious game pour s'entraîner au rôle de DOS en tir à l'arc : feux, signaux sonores, binômes AB/CD, sécurité sur la ligne de tir.">
+<meta property="og:url" content="https://ghibau.github.io/DoS/">
+<meta property="og:image" content="https://ghibau.github.io/DoS/apercu.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Le jeu du DOS : deux binômes d'archers sur la ligne de tir, feux et chronomètre">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{--bg:#10151c;--panel:#1a222d;--ink:#e8edf3;--mute:#8b98a8;--red:#e5484d;--yel:#f5b83d;--grn:#3fbf6a;--line:#2b3645;}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+.wrap{max-width:900px;margin:0 auto;padding:16px}
+h1{font-size:1.25rem;margin:0 0 4px}
+.sub{color:var(--mute);font-size:.9rem;margin-bottom:12px}
+.stats{display:flex;gap:16px;margin-bottom:10px;font-size:.95rem;color:var(--mute);flex-wrap:wrap}
+.stats b{color:var(--ink)}
+.stage{position:relative;height:400px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.target{position:absolute;top:14px;width:96px;height:96px;border-radius:50%;transform:translateX(-50%);
+  background:radial-gradient(circle,#f5d02f 0 14%,#e5484d 14% 34%,#3b82f6 34% 56%,#222 56% 78%,#eee 78% 100%)}
+.zone{position:absolute;left:0;right:0;font-size:.72rem;color:var(--mute);padding:3px 10px}
+.zline{top:206px;border-top:3px solid #fff}
+.zwait{top:304px;border-top:2px dashed var(--mute)}
+.archer{position:absolute;width:34px;height:34px;margin-left:-17px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:.85rem;color:#fff;border:3px solid transparent}
+.archer.AB{background:#3b82f6}
+.archer.CD{background:#f08c2e}
+.archer.done{border-color:var(--grn)}
+.archer.slow{border-color:var(--yel)}
+.archer.linger{border-color:var(--red);animation:pulse .8s infinite alternate}
+.archer small{position:absolute;top:36px;left:50%;transform:translateX(-50%);font-size:.68rem;font-weight:500;color:var(--mute);white-space:nowrap}
+.archer .bub{display:none;position:absolute;bottom:40px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#fff;color:#111;
+  font-style:normal;font-weight:500;font-size:.7rem;padding:3px 7px;border-radius:8px}
+.archer.linger .bl,.archer.slow .bs{display:block}
+@keyframes pulse{from{box-shadow:0 0 0 0 rgba(229,72,77,.7)}to{box-shadow:0 0 0 8px rgba(229,72,77,0)}}
+.msg{position:absolute;top:150px;left:50%;transform:translateX(-50%);background:var(--red);color:#fff;padding:10px 16px;border-radius:10px;
+  font-weight:600;font-size:.9rem;max-width:90%;text-align:center;opacity:0;pointer-events:none;transition:opacity .2s;z-index:5}
+.msg.show{opacity:1}
+.msg.warn{background:var(--yel);color:#2a1c00}
+.msg.ok{background:var(--grn);color:#06210f}
+.console{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-top:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.lights{display:flex;gap:10px;background:#0b0f14;padding:10px 12px;border-radius:30px}
+.light{width:30px;height:30px;border-radius:50%;opacity:.18;transition:opacity .1s}
+.light.on{opacity:1;box-shadow:0 0 14px currentColor}
+#lr.blink{animation:blink .45s infinite alternate}
+@keyframes blink{from{opacity:1}to{opacity:.15}}
+#lr{background:var(--red);color:var(--red)}
+#ly{background:var(--yel);color:var(--yel)}
+#lg{background:var(--grn);color:var(--grn)}
+.clock{min-width:150px}
+.time{font-size:2.8rem;font-variant-numeric:tabular-nums;font-weight:700;line-height:1}
+.lab{color:var(--mute);font-size:.8rem;margin-top:4px}
+.status{flex:1;min-width:220px;color:var(--mute);font-size:.9rem}
+.est{margin-top:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.est h3{margin:0 0 8px;font-size:.9rem;font-weight:600}
+.est .cells{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.est .cell{background:#0b0f14;border-radius:8px;padding:8px 10px}
+.est .cell span{display:block;font-size:.72rem;color:var(--mute)}
+.est .cell b{font-size:1.15rem;font-variant-numeric:tabular-nums}
+.est .base{margin-top:8px;font-size:.72rem;color:var(--mute)}
+button{font:inherit;cursor:pointer}
+.bar{position:sticky;bottom:0;background:linear-gradient(to top,var(--bg) 75%,transparent);padding:14px 0 8px;margin-top:8px;z-index:10}
+.bar .row{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:10px}
+.bar button{padding:16px 8px;border:0;border-radius:12px;font-weight:700;font-size:1rem}
+#bTir{background:var(--grn);color:#06210f}
+#bStop{background:var(--red);color:#fff}
+#bFin{background:#3b82f6;color:#fff}
+.bar button:disabled,.bar button#bTir:disabled,.bar button#bStop:disabled,.bar button#bFin:disabled{background:#2c3644;color:#6c7a8c;cursor:not-allowed}
+.hint{color:var(--mute);font-size:.75rem;margin-top:6px;text-align:center}
+details{margin-top:12px;color:var(--mute);font-size:.88rem}
+details label{display:inline-flex;align-items:center;gap:6px;margin:6px 14px 0 0}
+details input{width:64px;padding:4px;border-radius:6px;border:1px solid var(--line);background:#0b0f14;color:var(--ink)}
+.over{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;max-width:420px;width:100%}
+.card h2{margin:0 0 10px}
+.card p{margin:6px 0}
+.card button{margin-top:14px;padding:10px 16px;border:0;border-radius:8px;background:var(--grn);color:#06210f;font-weight:700}
+@media(max-width:560px){.bar .row{grid-template-columns:1fr}.est .cells{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Jeu du DOS – Directeur des tirs</h1>
+  <div class="sub">Une volée = un binôme (120 s), puis l'autre, puis tout le monde va au score, puis la volée repart avec l'ordre inversé : tout s'enchaîne automatiquement. Les boutons donnent du rythme : « Tir » avance le départ suivant, « Fin de volée » avance le score, « Stop » fige tout en cas d'urgence.</div>
+  <div class="stats">
+    <div>Volée <b id="sVol">0</b>/<b id="sTot">3</b></div>
+    <div>Fautes de sécurité <b id="sFault">0</b></div>
+    <div><button id="mute" style="background:none;border:0;color:var(--mute)">🔊 Son</button></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="target" style="left:27%"></div>
+    <div class="target" style="left:75%"></div>
+    <div class="zone zline">Ligne de tir</div>
+    <div class="zone zwait">Ligne d'attente</div>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="console">
+    <div class="lights"><div class="light on" id="lr"></div><div class="light" id="ly"></div><div class="light" id="lg"></div></div>
+    <div class="clock"><div class="time" id="time">--:--</div><div class="lab" id="lab">En attente</div></div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="est">
+    <h3>⏱ Temps nécessaire pour <span id="eN">10</span> volées</h3>
+    <div class="cells">
+      <div class="cell"><span>Maximum — tir laissé jusqu'à son terme</span><b id="eMax">—</b></div>
+      <div class="cell"><span>Constaté — temps laissé par toi</span><b id="eCons">—</b></div>
+      <div class="cell"><span>Minimum — bascule auto dès la ligne libre</span><b id="eMin">—</b></div>
+    </div>
+    <div class="base" id="eBase"></div>
+  </div>
+
+  <details id="settings">
+    <summary>Réglages (modifiables avant la première volée)</summary>
+    <label>Préparation (s) <input type="number" id="cPrep" value="10" min="4" max="60"></label>
+    <label>Temps de tir par binôme (s) <input type="number" id="cTir" value="120" min="10" max="600"></label>
+    <label>Flèches par volée <input type="number" id="cFl" value="3" min="1" max="12"></label>
+    <label>Temps moyen par flèche (s) <input type="number" id="cMoy" value="20" min="5" max="90"></label>
+    <label>Jaune à (s restantes) <input type="number" id="cJaune" value="30" min="0" max="120"></label>
+    <label>Temps à la cible (s) <input type="number" id="cCible" value="20" min="3" max="120"></label>
+    <label>Volées à jouer <input type="number" id="cVol" value="3" min="1" max="20"></label>
+    <label>Volées pour l'estimation <input type="number" id="cEst" value="10" min="1" max="30"></label>
+  </details>
+
+  <div class="bar">
+    <div class="row">
+      <button id="bTir">▶ Tir</button>
+      <button id="bStop">🛑 Stop</button>
+      <button id="bFin">⏹ Fin de volée</button>
+    </div>
+    <div class="hint">Raccourcis : T ou Espace = Tir · S = Stop · F = Fin de volée</div>
+  </div>
+</div>
+
+<div class="over" id="over" hidden>
+  <div class="card">
+    <h2>Bilan</h2>
+    <p id="rVol"></p><p id="rFault"></p><p id="rUrg"></p><p id="rCut"></p><p id="rEarly"></p><p id="rEst"></p>
+    <button id="again">Rejouer</button>
+  </div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const cfg={prep:10,tir:120,fleches:3,moy:20,jaune:30,cible:20,volees:3,est:10,linger:0.6};
+const XS=[16,34,66,84];
+const LINE_Y=192, WAIT_Y=326, TARGET_Y=124, SPEED=34, LINE_CLEAR_Y=214;
+// À la cible : 2 x 2 archers par cible (A B / C D), pour qu'ils ne se chevauchent pas
+const targetPos=a=>({x:(a.k<2?27:75)+(a.k%2===0?-6:6), y:TARGET_Y+(a.g==='AB'?0:46)});
+
+// phases : ready · prep · tir · attente (temps écoulé, on attend le DOS) · cible · urgence · over
+let phase='ready',vol=0,seg=0,curG='AB',phaseRemain=0,tirRemain=0,resumingTir=false,resumePhase='',resumeRemain=0,curLinger=null;
+let faults=0,urgOk=0,urgKo=0,cuts=0,early=0,msgT=null,muted=false,actx=null,lightNow='red';
+let slotElapsed=0,tClear=null,scoreElapsed=0,scoreTravelDone=false,scoreWaitDone=false;
+// Mesures (en secondes) pour le compteur d'estimation
+const S={slot:[],clear:[],scoreTravel:[],scoreWait:[],scoreDur:[]};
+
+const archers=[];
+const stage=$('#stage');
+const waitX=a=>XS[a.k]+(a.g==='AB'?-4:4);
+function setPos(a){a.el.style.left=a.x+'%';a.el.style.top=a.y+'px';}
+['AB','CD'].forEach(g=>{for(let k=0;k<4;k++){
+  const el=document.createElement('div');
+  el.className='archer '+g;
+  el.innerHTML='<span>'+g[k%2]+'</span><small></small><i class="bub bl">Je range mon matériel…</i><i class="bub bs">Je cherche ma flèche…</i>';
+  stage.appendChild(el);
+  const a={g,k,el,cnt:el.querySelector('small'),state:'wait',done:false,arrowAt:[],tShoot:0,lingerLeft:0,stayLeft:0,slowExtra:0,thenLine:false,thenTarget:false,visited:false,x:0,y:WAIT_Y};
+  a.x=waitX(a);setPos(a);
+  archers.push(a);
+}});
+const LINGER_TXT=['Je range mon matériel…','Je regarde mon score dans ma lunette…'];
+const groupArchers=g=>archers.filter(a=>a.g===g);
+const other=c=>c==='AB'?'CD':'AB';
+const nextFirst=()=>vol%2===0?'AB':'CD';   // premier binôme de la prochaine volée
+const prevOnLine=()=>archers.some(a=>a.g!==curG&&a.y<LINE_CLEAR_Y);
+// Relance possible dès que tous ont repassé la ligne de tir au retour de la cible
+const lineClear=()=>archers.every(a=>a.y>=LINE_CLEAR_Y&&a.state!=='toTarget'&&a.state!=='atTarget');
+const groupOnLine=g=>groupArchers(g).some(a=>a.y<LINE_CLEAR_Y||a.state==='toLine');
+// Au retour du score : tous sont allés à la cible ET ont repassé la ligne de tir
+const scoreClear=()=>archers.every(a=>a.visited)&&lineClear();
+
+// --- Son : le contexte audio est ouvert dès la première interaction, les bips partent sans délai
+let keepAlive=false;
+function initAudio(){
+  try{
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    if(actx.state==='suspended')actx.resume();
+    if(!keepAlive){
+      // tonalité quasi inaudible en continu : garde la sortie audio « éveillée » pour que le 1er bip ne soit pas avalé
+      const o=actx.createOscillator(),g=actx.createGain();
+      g.gain.value=0.0001;o.connect(g);g.connect(actx.destination);o.start();
+      keepAlive=true;
+    }
+  }catch(e){}
+}
+function beep(c,gap){
+  if(muted)return;
+  initAudio();
+  if(!actx)return;
+  gap=gap||0.45;
+  const play=()=>{
+    const base=actx.currentTime+0.12;   // court délai : tous les bips sont joués, y compris le premier
+    const dur=Math.min(.22,gap-.05);
+    for(let i=0;i<c;i++){
+      const o=actx.createOscillator(),g=actx.createGain();
+      o.frequency.value=880;o.connect(g);g.connect(actx.destination);
+      const t=base+i*gap;
+      g.gain.setValueAtTime(0,t);
+      g.gain.linearRampToValueAtTime(.25,t+.01);
+      g.gain.setValueAtTime(.25,t+dur-.03);
+      g.gain.linearRampToValueAtTime(0,t+dur);
+      o.start(t);o.stop(t+dur+.02);
+    }
+  };
+  if(actx.state==='running')play();
+  else actx.resume().then(play).catch(()=>{});
+}
+function setLights(c){
+  lightNow=c;
+  $('#lr').classList.toggle('on',c==='red');
+  $('#ly').classList.toggle('on',c==='yellow');
+  $('#lg').classList.toggle('on',c==='green');
+}
+function flash(t,type){
+  const m=$('#msg');m.textContent=t;m.className='msg show '+(type||'');
+  clearTimeout(msgT);msgT=setTimeout(()=>m.classList.remove('show'),4500);
+}
+function readCfg(){
+  cfg.prep=Math.max(4,+$('#cPrep').value||10);
+  cfg.tir=Math.max(10,+$('#cTir').value||120);
+  cfg.fleches=Math.max(1,Math.round(+$('#cFl').value||3));
+  cfg.moy=Math.max(5,+$('#cMoy').value||20);
+  cfg.jaune=Math.max(0,+$('#cJaune').value||0);
+  cfg.cible=Math.max(3,+$('#cCible').value||20);
+  cfg.volees=Math.max(1,Math.round(+$('#cVol').value||3));
+  cfg.est=Math.max(1,Math.round(+$('#cEst').value||10));
+}
+
+// Durées cumulées de chaque flèche : rythme propre à l'archer (±25 %) x aléa par flèche, autour de la moyenne réglée
+function arrowTimes(){
+  const pace=0.8+Math.random()*0.45;
+  let t=0;const out=[];
+  for(let i=0;i<cfg.fleches;i++){t+=cfg.moy*pace*(0.55+Math.random()*0.9)*1000;out.push(t);}
+  return out;
+}
+function leave(a){a.state='toWait';}
+
+// --- Bouton « Tir »
+function pressTir(){
+  initAudio();
+  if(phase==='urgence')resumeFromUrgence();
+  else if(phase==='ready'||phase==='cible')startVolee();
+  else if((phase==='tir'||phase==='attente')&&seg===0)switchBinome();
+}
+function startVolee(){
+  if(vol===0)readCfg();
+  if(vol>=cfg.volees)return;
+  if(!(phase==='cible'?scoreClear():lineClear())){
+    faults++;
+    flash('⚠ Faute de sécurité : des archers sont encore devant la ligne de tir ! Le signal n’est pas lancé.');
+    return;
+  }
+  if(phase==='cible')S.scoreDur.push(scoreElapsed/1000);
+  vol++;seg=0;
+  beginBinome();
+}
+function switchBinome(){
+  if(groupOnLine(curG)){
+    faults++;
+    flash('⚠ Faute de sécurité : des archers sont encore sur la ligne de tir ! Le signal n’est pas lancé.');
+    return;
+  }
+  if(phase==='tir')early+=Math.max(0,phaseRemain)/1000;
+  recordSlot();
+  seg=1;
+  beginBinome();
+}
+function recordSlot(){
+  S.slot.push(slotElapsed/1000);
+  S.clear.push(Math.min(tClear!==null?tClear:slotElapsed,cfg.tir*1000)/1000);
+}
+function beginBinome(){
+  const first=vol%2===1?'AB':'CD';
+  curG=seg===0?first:other(first);
+  phase='prep';phaseRemain=cfg.prep*1000;tirRemain=cfg.tir*1000;resumingTir=false;curLinger=null;
+  slotElapsed=0;tClear=null;
+  setLights('red');
+  beep(2);   // 2 bips dès le lancement des 10 s
+  groupArchers(curG).forEach(a=>{
+    a.done=false;a.cnt.textContent='';a.el.classList.remove('done');
+    // ceux qui reviennent de la cible repassent d'abord prendre leur arc derrière la ligne d'attente
+    if(a.state==='wait'){a.state='toLine';a.thenLine=false;}
+    else{a.state='toWait';a.thenLine=true;}
+  });
+}
+function startTir(){
+  phase='tir';phaseRemain=tirRemain;
+  if(prevOnLine()){
+    faults++;
+    flash('⚠ Faute de sécurité : un archer était encore sur la ligne au départ des tirs !');
+  }
+  const g=groupArchers(curG);
+  if(!resumingTir){
+    g.forEach(a=>{a.arrowAt=arrowTimes();a.tShoot=0;a.done=false;a.cnt.textContent='0/'+cfg.fleches;});
+    curLinger=(seg===0&&Math.random()<cfg.linger)?g[Math.floor(Math.random()*g.length)]:null;
+  }
+  resumingTir=false;
+  setLights('green');
+  beep(1);   // 1 bip à la fin des 10 s : début du temps de tir
+}
+function endTime(){
+  // Fin du temps de tir : l'enchaînement est automatique (binôme suivant, ou score après le 2e binôme)
+  const unfinished=groupArchers(curG).filter(a=>!a.done);
+  if(unfinished.length)flash('Temps écoulé : '+unfinished.length+' archer'+(unfinished.length>1?'s':'')+' n’'+(unfinished.length>1?'ont':'a')+' pas tiré toutes ses flèches.','warn');
+  unfinished.forEach(a=>{a.done=true;leave(a);});
+  // au bout des 2 minutes, les traînards quittent le pas de tir dans tous les cas
+  groupArchers(curG).forEach(a=>{if(a.state==='linger'){a.el.classList.remove('linger');leave(a);}});
+  recordSlot();
+  if(seg===0){seg=1;beginBinome();}
+  else startScore();
+}
+
+// --- Bouton « Fin de volée » : tout le monde va au score
+function finDeVolee(){
+  if(phase!=='tir'&&phase!=='attente')return;
+  const unfinished=groupArchers(curG).filter(a=>!a.done);
+  const cut=unfinished.length+(seg===0?4:0);   // archers qui n'ont pas (fini de) tirer
+  if(cut>0){
+    cuts++;
+    flash('Fin de volée prématurée : '+cut+(cut>1?' archers n’ont':' archer n’a')+' pas fini de tirer !');
+  }else{
+    if(phase==='tir')early+=Math.max(0,phaseRemain)/1000;
+    recordSlot();
+  }
+  startScore();
+}
+function startScore(){
+  beep(3);
+  phase='cible';setLights('red');
+  scoreElapsed=0;scoreTravelDone=false;scoreWaitDone=false;
+  const slowA=Math.random()<0.5?archers[Math.floor(Math.random()*archers.length)]:null;
+  archers.forEach(a=>{
+    a.thenLine=false;a.visited=false;a.done=false;a.cnt.textContent='';
+    a.el.classList.remove('done','linger','slow');
+    a.slowExtra=(a===slowA)?9000+Math.random()*10000:0;
+    // d'abord déposer l'arc derrière la ligne d'attente, puis aller à la cible
+    if(a.state==='wait'){a.state='toTarget';a.thenTarget=false;}
+    else{a.state='toWait';a.thenTarget=true;}
+  });
+}
+
+// --- Bouton « Stop » (urgence)
+function urgence(){
+  if(phase!=='prep'&&phase!=='tir')return;
+  const danger=prevOnLine();
+  if(danger){urgOk++;flash('Stop : bien vu, la ligne n’était pas libre !','ok');}
+  else{urgKo++;flash('Stop : aucun danger réel sur la ligne.','warn');}
+  resumePhase=phase;resumeRemain=phaseRemain;
+  phase='urgence';setLights('red');
+  beep(6,0.2);
+  archers.forEach(a=>{if(a.state==='linger')a.lingerLeft=Math.min(a.lingerLeft,1500);});
+}
+function resumeFromUrgence(){
+  if(prevOnLine()){flash('La ligne n’est pas libre : attends que l’archer ait quitté la ligne.','warn');return;}
+  if(resumePhase==='tir'){
+    // reprise du tir avec le temps restant
+    phase='tir';phaseRemain=resumeRemain;
+    setLights(phaseRemain<=cfg.jaune*1000?'yellow':'green');beep(1);
+  }else{
+    resumingTir=false;
+    phase='prep';phaseRemain=cfg.prep*1000;
+    setLights('red');beep(2);
+  }
+}
+
+// --- Estimation pour N volées
+const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:null;
+function estimate(){
+  const N=cfg.est,P=cfg.prep,T=cfg.tir;
+  const prior=15+1.3*cfg.cible;                 // trajet cible aller-retour estimé tant qu'on n'a rien mesuré
+  const sc=avg(S.scoreTravel);const score=sc!==null?sc:prior;                 // ligne de tir repassée
+  const sw=avg(S.scoreWait);const scoreMax=sw!==null?sw:prior+3.5;            // tous revenus au point de départ (arc repris)
+  const scD=avg(S.scoreDur);const scoreReal=scD!==null?scD:scoreMax;          // relance réellement constatée
+  const slot=avg(S.slot),clr=avg(S.clear);
+  return{
+    max:N*(2*(P+T)+scoreMax),
+    cons:slot!==null?N*(2*(P+slot)+scoreReal):null,
+    min:clr!==null?N*(2*(P+Math.min(clr,T))+score):null
+  };
+}
+function fmtDur(s){
+  const m=Math.round(s/60);
+  return m>=60?Math.floor(m/60)+' h '+String(m%60).padStart(2,'0'):m+' min';
+}
+function renderEst(){
+  const e=estimate();
+  $('#eN').textContent=cfg.est;
+  $('#eMax').textContent=fmtDur(e.max);
+  $('#eCons').textContent=e.cons===null?'—':fmtDur(e.cons);
+  $('#eMin').textContent=e.min===null?'—':fmtDur(e.min);
+  $('#eBase').textContent=S.slot.length?('Basé sur '+S.slot.length+' binôme'+(S.slot.length>1?'s':'')+' et '+S.scoreTravel.length+' passage'+(S.scoreTravel.length>1?'s':'')+' au score mesurés.'):'Maximum calculé d’après les réglages ; constaté et minimum apparaissent après le premier binôme.';
+}
+
+function gameOver(){
+  phase='over';
+  const e=estimate();
+  $('#rVol').textContent='Volées menées à terme : '+vol+' / '+cfg.volees;
+  $('#rFault').textContent='Fautes de sécurité : '+faults+(faults===0?' — parfait !':'');
+  $('#rUrg').textContent='Stops : '+urgOk+' justifié'+(urgOk>1?'s':'')+', '+urgKo+' sans danger réel';
+  $('#rCut').textContent='Fins de volée prématurées : '+cuts;
+  $('#rEarly').textContent='Temps de tir gagné en basculant avant la fin : '+Math.round(early)+' s';
+  $('#rEst').textContent='Pour '+cfg.est+' volées : max '+fmtDur(e.max)+' · constaté '+(e.cons===null?'—':fmtDur(e.cons))+' · min '+(e.min===null?'—':fmtDur(e.min));
+  $('#over').hidden=false;
+}
+function reset(){
+  phase='ready';vol=0;seg=0;faults=0;urgOk=0;urgKo=0;cuts=0;early=0;curLinger=null;resumingTir=false;
+  slotElapsed=0;tClear=null;scoreElapsed=0;scoreTravelDone=false;scoreWaitDone=false;
+  S.slot=[];S.clear=[];S.scoreTravel=[];S.scoreWait=[];S.scoreDur=[];
+  archers.forEach(a=>{a.state='wait';a.done=false;a.arrowAt=[];a.tShoot=0;a.slowExtra=0;a.thenLine=false;a.cnt.textContent='';a.el.className='archer '+a.g;a.x=waitX(a);a.y=WAIT_Y;setPos(a);});
+  $('#over').hidden=true;setLights('red');render();
+}
+
+function move(a,dt){
+  let tx,ty,next;
+  if(a.state==='toLine'){tx=XS[a.k];ty=LINE_Y;next='line';}
+  else if(a.state==='toWait'){tx=waitX(a);ty=WAIT_Y;next='wait';}
+  else if(a.state==='toTarget'){const p=targetPos(a);tx=p.x;ty=p.y;next='atTarget';}
+  else return;
+  const W=stage.clientWidth||800;
+  const dx=(tx-a.x)/100*W, dy=ty-a.y, dist=Math.hypot(dx,dy), step=SPEED*dt/1000;
+  if(dist<=step){
+    a.x=tx;a.y=ty;a.state=next;
+    if(next==='wait'){
+      if(a.thenLine){a.thenLine=false;a.state='toLine';}   // arc repris : direction la ligne de tir
+      else if(a.thenTarget){a.thenTarget=false;a.state='toTarget';a.cnt.textContent='';}   // arc déposé : direction la cible
+      else a.cnt.textContent='';
+    }
+    if(next==='atTarget'){a.visited=true;a.stayLeft=cfg.cible*1000*(0.85+Math.random()*0.5)+a.slowExtra;}
+  }else{
+    a.x+=dx/dist*step/W*100;a.y+=dy/dist*step;
+  }
+  setPos(a);
+}
+
+function step(dt){
+  if(phase==='prep'){
+    phaseRemain-=dt;
+    if(phaseRemain<=0)startTir();
+  }else if(phase==='tir'){
+    phaseRemain-=dt;slotElapsed+=dt;
+    groupArchers(curG).forEach(a=>{
+      if(a.done)return;
+      a.tShoot+=dt;
+      const shots=a.arrowAt.filter(x=>a.tShoot>=x).length;
+      a.cnt.textContent=shots+'/'+cfg.fleches;
+      if(shots>=cfg.fleches){
+        a.done=true;a.el.classList.add('done');
+        if(a===curLinger){
+          // reste quelques secondes sur la ligne (rangement du matériel, regard au score dans la lunette…)
+          a.state='linger';a.lingerLeft=6000+Math.random()*10000;
+          a.el.querySelector('.bl').textContent=LINGER_TXT[Math.floor(Math.random()*LINGER_TXT.length)];
+          a.el.classList.add('linger');
+        }else leave(a);   // retour derrière la ligne d'attente sans attendre les autres
+      }
+    });
+    const want=phaseRemain<=cfg.jaune*1000?'yellow':'green';
+    if(want!==lightNow&&phase==='tir')setLights(want);
+    if(phase==='tir'&&phaseRemain<=0)endTime();
+  }else if(phase==='attente'){
+    slotElapsed+=dt;
+  }else if(phase==='cible'){
+    scoreElapsed+=dt;
+    if(!scoreTravelDone&&scoreClear()){S.scoreTravel.push(scoreElapsed/1000);scoreTravelDone=true;}
+    if(!scoreWaitDone&&archers.every(a=>a.state==='wait')){S.scoreWait.push(scoreElapsed/1000);scoreWaitDone=true;}
+  }
+  archers.forEach(a=>{
+    if(a.state==='linger'){
+      a.lingerLeft-=dt;
+      if(a.lingerLeft<=0){a.el.classList.remove('linger');leave(a);}
+    }
+    if(a.state==='atTarget'){
+      a.stayLeft-=dt;
+      if(a.slowExtra>0&&a.stayLeft<=a.slowExtra)a.el.classList.add('slow');
+      if(a.stayLeft<=0){a.el.classList.remove('slow');a.slowExtra=0;a.state='toWait';}
+    }
+    move(a,dt);
+  });
+  // instant où le binôme en cours a entièrement quitté la ligne (sert au calcul du minimum)
+  if((phase==='tir'||phase==='attente')&&tClear===null){
+    const g=groupArchers(curG);
+    if(g.every(a=>a.done&&a.y>=LINE_CLEAR_Y&&a.state!=='linger'&&a.state!=='toLine'&&a.state!=='line'))tClear=slotElapsed;
+  }
+  if(phase==='cible'&&archers.every(a=>a.state==='wait')){
+    if(vol>=cfg.volees)gameOver();
+    else startVolee();   // relance automatique dès que tout le monde a repris son arc
+  }
+}
+
+const fmt=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');};
+
+function render(){
+  let t='--:--',lab='En attente',msg='';
+  if(phase==='ready')msg='Tout est prêt. Appuie sur « Tir » pour lancer la volée : AB puis CD.';
+  if(phase==='prep'){t=fmt(phaseRemain);lab='Préparation — binôme '+curG;msg='Volée '+vol+' : le binôme '+curG+' s’installe. Vérifie que la ligne est libre avant le vert.';}
+  if(phase==='tir'){
+    t=fmt(phaseRemain);lab='Temps de tir — binôme '+curG;
+    const g=groupArchers(curG);
+    msg='Volée '+vol+' — '+g.filter(a=>a.done).length+' / '+g.length+' archers ont fini. '+(seg===0?'À la fin du temps, le binôme '+other(curG)+' est appelé automatiquement ; « Tir » l’appelle plus tôt si la ligne est libre.':'À la fin du temps, le score est automatique ; « Fin de volée » l’avance quand tout le monde a fini.');
+  }
+  if(phase==='attente'){
+    t='00:00';lab='Temps écoulé — binôme '+curG;
+    msg=seg===0?'Dès que la ligne est libre, appuie sur « Tir » pour lancer le binôme '+other(curG)+'.':'Appuie sur « Fin de volée » pour aller au score.';
+  }
+  if(phase==='cible'){
+    lab='Tout le monde au score';
+    msg=vol>=cfg.volees?'Dernière volée : les archers reviennent.':(scoreClear()?'Tous ont repassé la ligne de tir : « Tir » relance maintenant, sinon la volée repart seule quand ils ont repris leur arc.':'Ramassage des flèches. La volée repart seule quand tous ont repris leur arc ; « Tir » l’avance dès que la ligne est franchie.');
+  }
+  if(phase==='urgence'){t=fmt(resumeRemain);lab='STOP';msg=resumePhase==='tir'?'Quand la ligne est libre, appuie sur « Tir » : le tir reprend avec le temps restant.':'Quand la ligne est libre, appuie sur « Tir » : les 10 s de préparation reprennent.';}
+  if(phase==='over'){lab='Terminé';}
+  $('#time').textContent=t;$('#lab').textContent=lab;$('#status').textContent=msg;
+  $('#sVol').textContent=vol;$('#sTot').textContent=cfg.volees;$('#sFault').textContent=faults;
+  $('#lr').classList.toggle('blink',phase==='urgence');
+
+  let tl='▶ Tir',td=true;
+  if(phase==='ready'){td=false;tl='▶ Tir — binôme AB (10 s)';}
+  else if((phase==='tir'||phase==='attente')&&seg===0){td=false;tl='▶ Tir — binôme '+other(curG)+' (10 s)';}
+  else if((phase==='tir'||phase==='attente')&&seg===1){tl='▶ Tir (après le score)';}
+  else if(phase==='cible'&&vol<cfg.volees){td=false;tl='▶ Tir — relancer '+nextFirst()+' puis '+other(nextFirst());}
+  else if(phase==='urgence'){td=false;tl='▶ Tir — reprendre';}
+  else if(phase==='prep'){tl='▶ Tir (10 s en cours)';}
+  else tl='Dernière volée terminée';
+  $('#bTir').disabled=td;$('#bTir').textContent=tl;
+  $('#bStop').disabled=!(phase==='prep'||phase==='tir');
+  $('#bFin').disabled=!(phase==='tir'||phase==='attente');
+  $('#settings').querySelectorAll('input').forEach(i=>i.disabled=(phase!=='ready'));
+  renderEst();
+}
+
+let last=performance.now();
+function loop(){
+  const now=performance.now();
+  const dt=Math.min(250,now-last);last=now;
+  step(dt);
+  render();
+}
+
+$('#bTir').onclick=pressTir;
+$('#bStop').onclick=()=>{initAudio();urgence();};
+$('#bFin').onclick=()=>{initAudio();finDeVolee();};
+$('#again').onclick=reset;
+$('#mute').onclick=()=>{muted=!muted;$('#mute').textContent=muted?'🔇 Muet':'🔊 Son';};
+$('#settings').addEventListener('input',()=>{if(phase==='ready'){readCfg();render();}});
+document.addEventListener('pointerdown',initAudio);
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT')return;
+  initAudio();
+  if(e.code==='Space'||e.key==='t'||e.key==='T'){e.preventDefault();pressTir();}
+  else if(e.key==='s'||e.key==='S')urgence();
+  else if(e.key==='f'||e.key==='F')finDeVolee();
+});
+setInterval(loop,50);
+render();
+</script>
+</body>
+</html>
